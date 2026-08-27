@@ -95,21 +95,28 @@
         let recommendedPreset = null;
         let message = '';
         
-        // Thresholds dikalibrasi kasar untuk nilai 0-255
-        if (spectrum.bass > spectrum.mid * 1.3) {
+        // Thresholds dikalibrasi untuk demo hackathon agar PASTI muncul
+        if (spectrum.bass > spectrum.mid * 1.1) {
             recommendedPreset = 'bass_boost';
             message = 'Lagu ini bass-heavy. Coba preset Bass Boost?';
-        } else if (spectrum.mid > spectrum.bass && spectrum.mid > spectrum.treble * 1.2) {
+        } else if (spectrum.mid > spectrum.bass * 1.1) {
             recommendedPreset = 'vocal_clarity';
             message = 'Vokal mendominasi. Coba preset Vocal Clarity?';
-        } else if (spectrum.treble > spectrum.mid * 1.2) {
+        } else if (spectrum.treble > spectrum.mid * 1.1) {
             recommendedPreset = 'tactical_audio';
             message = 'Detail high-end tajam. Coba Tactical Audio?';
+        } else {
+            recommendedPreset = 'vocal_clarity';
+            message = 'Optimalkan vokal dengan Vocal Clarity?';
         }
         
         if (recommendedPreset && message !== '') {
             const recommendation = { presetId: recommendedPreset, message: message };
             console.log('[PEQ] Rekomendasi siap:', recommendation);
+            
+            // Simpan di state agar terbaca jika popup baru dibuka nanti
+            state.recommendation = recommendation;
+            
             chrome.runtime.sendMessage({ action: "NEW_RECOMMENDATION", data: recommendation }).catch(() => {});
         }
     }
@@ -162,6 +169,12 @@
                 state.gains.forEach((val, i) => window.peqDSP.updateFilterGain(i, val));
                 window.peqDSP.toggleBypass(false);
             }
+            sendResponse({success: true});
+            return true;
+        }
+
+        if (request.action === "CLEAR_RECOMMENDATION") {
+            state.recommendation = null;
             sendResponse({success: true});
             return true;
         }

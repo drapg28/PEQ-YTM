@@ -171,6 +171,12 @@ function syncUI(state) {
     } else {
         document.getElementById('preset-dropdown').value = 'custom';
     }
+
+    if (state.recommendation) {
+        showRecommendationToast(state.recommendation);
+        // Hapus dari state agar tidak muncul lagi terus-menerus
+        chrome.tabs.sendMessage(activeTabId, { action: "CLEAR_RECOMMENDATION" });
+    }
 }
 
 function toggleBypass() {
