@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "YTM PEQ (Hackathon)",
+  "version": "1.0",
+  "description": "10-Band Parametric EQ untuk YouTube Music",
+  "permissions": ["storage", "scripting"],
+  "host_permissions": ["https://music.youtube.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://music.youtube.com/*"],
+      "js": ["scripts/audio_dsp.js", "scripts/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

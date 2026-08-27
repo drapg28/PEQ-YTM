@@ -1,0 +1,14 @@
+# Node modules (jika nanti pakai npm)
+node_modules/
+
+# Mac OS
+.DS_Store
+
+# Log files
+*.log
+
+# Extension build files (jika nanti pakai bundler)
+dist/
+build/
+*.zip
+*.crx
