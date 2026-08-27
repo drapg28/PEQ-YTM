@@ -1,0 +1,28 @@
+{
+  "presets": [
+    {
+      "id": "flat",
+      "name": "Flat (Reference)",
+      "description": "Bypass/Zero EQ",
+      "bands": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "id": "vocal_clarity",
+      "name": "Vocal Clarity (J-Pop/Indie)",
+      "description": "Boost presence 1-2.5kHz tanpa shoutiness",
+      "bands": [0, 0, -1, 0, 0.5, 1.5, 2, 1, 0, 0]
+    },
+    {
+      "id": "bass_boost",
+      "name": "Bass Boost",
+      "description": "Punch & sub-bass punch untuk EDM/Hip-Hop",
+      "bands": [4, 3, 1, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "id": "tactical_audio",
+      "name": "Tactical Audio (Gaming)",
+      "description": "Clarity untuk footstep/reload cues 4-8kHz",
+      "bands": [0, 0, 0, 0, 0, 0.5, 1, 2.5, 2, 0.5]
+    }
+  ]
+}

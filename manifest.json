@@ -5,6 +5,12 @@
   "description": "10-Band Parametric EQ untuk YouTube Music",
   "permissions": ["storage", "scripting"],
   "host_permissions": ["https://music.youtube.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "ui/popup.html"
+  },
   "content_scripts": [
     {
       "matches": ["https://music.youtube.com/*"],

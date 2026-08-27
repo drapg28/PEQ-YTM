@@ -3,36 +3,35 @@
     let observer = null;
     let isGraphBuilt = false;
 
-    // Dummy state untuk Phase 1
-    const testPreset = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    // STATE IN-MEMORY (Source of Truth - Fase 2)
+    let state = {
+        gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        isBypassed: false,
+        presetId: 'custom'
+    };
 
     function findAndHookVideo() {
-        // Gotcha 2.3.5: Selector DOM generik
         const video = document.querySelector('video');
         
         if (video && video !== videoElement) {
-            console.log('[PEQ] Elemen video ditemukan dan di-hook:', video);
+            console.log('[PEQ] Elemen video ditemukan:', video);
             videoElement = video;
-            
-            // Gotcha 2.3.4: AudioContext butuh resume() dari user gesture asli
             video.addEventListener('play', handlePlayEvent);
         }
     }
 
     function handlePlayEvent() {
-        console.log('[PEQ] Video dimainkan. Inisialisasi Audio Engine...');
-        
+        if (!window.peqDSP) return;
         const success = window.peqDSP.initAudio(videoElement);
         if (success) {
             const ctx = window.peqDSP.getAudioContext();
             if (ctx && ctx.state === 'suspended') {
-                ctx.resume().then(() => {
-                    console.log('[PEQ] AudioContext di-resume.');
-                });
+                ctx.resume().then(() => console.log('[PEQ] AudioContext di-resume.'));
             }
             
-            // Gotcha 2.3.1: Re-build graph jika video direcreate
-            window.peqDSP.createFilterChain(testPreset);
+            // Terapkan state yang ada di memory saat build
+            window.peqDSP.createFilterChain(state.gains);
+            window.peqDSP.toggleBypass(state.isBypassed);
             isGraphBuilt = true;
             console.log('[PEQ] Filter chain dibangun (10-Band + Compressor). EQ aktif.');
         } else {
@@ -41,7 +40,6 @@
     }
 
     function observeDOM() {
-        // Gotcha 2.3.1: Deteksi video element SPA re-render
         observer = new MutationObserver(() => {
             const currentVideo = document.querySelector('video');
             if (currentVideo && currentVideo !== videoElement) {
@@ -56,27 +54,61 @@
         });
     }
 
-    // Tools pengujian manual via Developer Console
-    window.peqTest = {
-        setGain: (bandIndex, gainDb) => {
-            window.peqDSP.updateFilterGain(bandIndex, gainDb);
-            console.log(`[PEQ Test] Band ${bandIndex} di-set ke ${gainDb} dB`);
-        },
-        toggleBypass: (bypass) => {
-            const state = window.peqDSP.toggleBypass(bypass);
-            console.log(`[PEQ Test] Bypass EQ: ${state ? 'AKTIF (Bisu EQ)' : 'NON-AKTIF (EQ Jalan)'}`);
-        },
-        status: () => {
-            const ctx = window.peqDSP.getAudioContext();
-            console.log({
-                audioContextState: ctx ? ctx.state : 'Belum inisialisasi',
-                videoHooked: !!videoElement,
-                isGraphBuilt: isGraphBuilt
-            });
-        }
-    };
+    // --- IPC & Persistence (Fase 2) ---
+    function initPersistence() {
+        chrome.runtime.sendMessage({action: "GET_INIT_STATE"}, (response) => {
+            if (response && response.state) {
+                console.log('[PEQ] Restoring state dari local storage...');
+                state = response.state;
+                if (isGraphBuilt && window.peqDSP) {
+                    state.gains.forEach((val, i) => window.peqDSP.updateFilterGain(i, val));
+                    window.peqDSP.toggleBypass(state.isBypassed);
+                }
+            }
+        });
+    }
 
-    console.log('[PEQ] Content script (Fase 1) diinjeksi.');
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === "GET_STATE") {
+            sendResponse(state);
+            return true;
+        }
+
+        if (request.action === "UPDATE_GAIN") {
+            state.gains[request.band] = request.value;
+            state.presetId = 'custom';
+            if (isGraphBuilt && window.peqDSP) {
+                window.peqDSP.updateFilterGain(request.band, request.value);
+            }
+            sendResponse({success: true});
+            return true;
+        }
+
+        if (request.action === "TOGGLE_BYPASS") {
+            state.isBypassed = request.bypass !== undefined ? request.bypass : !state.isBypassed;
+            if (isGraphBuilt && window.peqDSP) {
+                window.peqDSP.toggleBypass(state.isBypassed);
+            }
+            sendResponse({success: true, isBypassed: state.isBypassed});
+            return true;
+        }
+
+        if (request.action === "APPLY_PRESET") {
+            state.gains = [...request.bands];
+            state.presetId = request.presetId;
+            state.isBypassed = false;
+            
+            if (isGraphBuilt && window.peqDSP) {
+                state.gains.forEach((val, i) => window.peqDSP.updateFilterGain(i, val));
+                window.peqDSP.toggleBypass(false);
+            }
+            sendResponse({success: true});
+            return true;
+        }
+    });
+
+    console.log('[PEQ] Content script (Fase 2) diinjeksi.');
     findAndHookVideo();
     observeDOM();
+    initPersistence();
 })();
