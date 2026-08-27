@@ -34,6 +34,9 @@
             window.peqDSP.toggleBypass(state.isBypassed);
             isGraphBuilt = true;
             console.log('[PEQ] Filter chain dibangun (10-Band + Compressor). EQ aktif.');
+            
+            // Fase 4: Mulai analisis spektrum
+            startAnalysis();
         } else {
             console.error('[PEQ] Gagal attach Web Audio API ke video.');
         }
@@ -52,6 +55,63 @@
             childList: true,
             subtree: true
         });
+    }
+
+    // --- Auto-Analisis (Fase 4) ---
+    let analysisInterval = null;
+
+    function startAnalysis() {
+        if (analysisInterval) clearInterval(analysisInterval);
+        
+        let readCount = 0;
+        let tempSpectrum = { bass: 0, mid: 0, treble: 0 };
+
+        analysisInterval = setInterval(() => {
+            if (!isGraphBuilt || !window.peqDSP || state.isBypassed) return;
+            
+            const current = window.peqDSP.analyzeSpectrum();
+            if (!current) return;
+            
+            // Kumpulkan data rata-rata 10 kali (5 detik pertama lagu)
+            if (readCount < 10) { 
+                tempSpectrum.bass += current.bassEnergy;
+                tempSpectrum.mid += current.midEnergy;
+                tempSpectrum.treble += current.trebleEnergy;
+                readCount++;
+                
+                if (readCount === 10) {
+                    const baselineSpectrum = {
+                        bass: tempSpectrum.bass / 10,
+                        mid: tempSpectrum.mid / 10,
+                        treble: tempSpectrum.treble / 10
+                    };
+                    evaluateAndRecommend(baselineSpectrum);
+                }
+            }
+        }, 500);
+    }
+
+    function evaluateAndRecommend(spectrum) {
+        let recommendedPreset = null;
+        let message = '';
+        
+        // Thresholds dikalibrasi kasar untuk nilai 0-255
+        if (spectrum.bass > spectrum.mid * 1.3) {
+            recommendedPreset = 'bass_boost';
+            message = 'Lagu ini bass-heavy. Coba preset Bass Boost?';
+        } else if (spectrum.mid > spectrum.bass && spectrum.mid > spectrum.treble * 1.2) {
+            recommendedPreset = 'vocal_clarity';
+            message = 'Vokal mendominasi. Coba preset Vocal Clarity?';
+        } else if (spectrum.treble > spectrum.mid * 1.2) {
+            recommendedPreset = 'tactical_audio';
+            message = 'Detail high-end tajam. Coba Tactical Audio?';
+        }
+        
+        if (recommendedPreset && message !== '') {
+            const recommendation = { presetId: recommendedPreset, message: message };
+            console.log('[PEQ] Rekomendasi siap:', recommendation);
+            chrome.runtime.sendMessage({ action: "NEW_RECOMMENDATION", data: recommendation }).catch(() => {});
+        }
     }
 
     // --- IPC & Persistence (Fase 2) ---

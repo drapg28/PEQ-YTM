@@ -133,6 +133,39 @@ const peqDSP = (function() {
         return analyserNode;
     }
 
+    function averageRange(dataArray, minFreq, maxFreq, sampleRate) {
+        const nyquist = sampleRate / 2;
+        const binCount = dataArray.length;
+        
+        const minBin = Math.floor((minFreq / nyquist) * binCount);
+        const maxBin = Math.ceil((maxFreq / nyquist) * binCount);
+        
+        let sum = 0;
+        let count = 0;
+        const start = Math.max(0, minBin);
+        const end = Math.min(binCount - 1, maxBin);
+        
+        for (let i = start; i <= end; i++) {
+            sum += dataArray[i];
+            count++;
+        }
+        
+        return count > 0 ? sum / count : 0;
+    }
+
+    function analyzeSpectrum() {
+        if (!analyserNode || !audioContext) return null;
+        
+        const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+        analyserNode.getByteFrequencyData(dataArray);
+        
+        return {
+            bassEnergy: averageRange(dataArray, 20, 250, audioContext.sampleRate),
+            midEnergy: averageRange(dataArray, 250, 2000, audioContext.sampleRate),
+            trebleEnergy: averageRange(dataArray, 2000, 8000, audioContext.sampleRate),
+        };
+    }
+
     function getAudioContext() {
         return audioContext;
     }
@@ -143,6 +176,7 @@ const peqDSP = (function() {
         updateFilterGain,
         toggleBypass,
         attachAnalyser,
+        analyzeSpectrum,
         getAudioContext
     };
 })();

@@ -45,6 +45,35 @@ async function init() {
     // 4. Setup listeners
     document.getElementById('bypass-btn').addEventListener('click', toggleBypass);
     document.getElementById('preset-dropdown').addEventListener('change', handlePresetChange);
+
+    // 5. Dengarkan pesan Rekomendasi (Fase 4)
+    chrome.runtime.onMessage.addListener((request) => {
+        if (request.action === "NEW_RECOMMENDATION") {
+            showRecommendationToast(request.data);
+        }
+    });
+}
+
+function showRecommendationToast(data) {
+    if (!data) return;
+    const toast = document.getElementById('toast');
+    toast.innerHTML = `
+        <div style="margin-bottom: 8px;">${data.message}</div>
+        <button id="apply-rec-btn" style="background:white; color:#2196F3; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; width:100%;">Terapkan Preset</button>
+    `;
+    toast.classList.remove('hidden');
+    
+    document.getElementById('apply-rec-btn').addEventListener('click', () => {
+        const dropdown = document.getElementById('preset-dropdown');
+        dropdown.value = data.presetId;
+        dropdown.dispatchEvent(new Event('change'));
+        toast.classList.add('hidden');
+    });
+    
+    // Auto hide
+    setTimeout(() => {
+        toast.classList.add('hidden');
+    }, 8000);
 }
 
 function disableUI() {
