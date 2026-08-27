@@ -23,6 +23,12 @@
       "name": "Tactical Audio (Gaming)",
       "description": "Clarity untuk footstep/reload cues 4-8kHz",
       "bands": [0, 0, 0, 0, 0, 0.5, 1, 2.5, 2, 0.5]
+    },
+    {
+      "id": "community_harman_ish",
+      "name": "Harman Target (Community)",
+      "description": "Adaptasi kurva Harman 10-band. (Source: AutoEQ by Jaakko Pasanen, MIT License)",
+      "bands": [3, 2, 0, -1, -1.5, -1, 0, 1, 2, 1]
     }
   ]
 }

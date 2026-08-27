@@ -29,5 +29,8 @@ Ekstensi Chrome cerdas yang memberikan kontrol penuh atas kualitas audio di YouT
 - **Web Audio API** (`MediaElementSource`, `BiquadFilterNode`, `AnalyserNode`, `DynamicsCompressorNode`)
 - SPA DOM Observer untuk YouTube Music
 
+## 📜 Credits & Atribusi
+- **Community Presets (Harman Target):** Data diadaptasi dari proyek *open-source* [AutoEq](https://github.com/jaakkopasanen/AutoEq) oleh Jaakko Pasanen (lisensi MIT).
+
 ---
 *Dikembangkan secara khusus untuk Hackathon 2026* 🚀
