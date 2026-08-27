@@ -62,32 +62,47 @@
 
     function startAnalysis() {
         if (analysisInterval) clearInterval(analysisInterval);
-        
-        let readCount = 0;
-        let tempSpectrum = { bass: 0, mid: 0, treble: 0 };
+
+        const WINDOW_SIZE = 16;           // ~8 detik rolling window (16 x 500ms)
+        const STABLE_READS_REQUIRED = 6;  // klasifikasi harus konsisten 6x berturut sebelum direkomendasikan
+        let spectrumBuffer = [];
+        let lastRecommendedPreset = null;
+        let consecutiveMatchCount = 0;
 
         analysisInterval = setInterval(() => {
             if (!isGraphBuilt || !window.peqDSP || state.isBypassed) return;
-            
+
             const current = window.peqDSP.analyzeSpectrum();
             if (!current) return;
-            
-            // Kumpulkan data rata-rata 10 kali (5 detik pertama lagu)
-            if (readCount < 10) { 
-                tempSpectrum.bass += current.bassEnergy;
-                tempSpectrum.mid += current.midEnergy;
-                tempSpectrum.treble += current.trebleEnergy;
-                readCount++;
-                
-                if (readCount === 10) {
-                    const baselineSpectrum = {
-                        bass: tempSpectrum.bass / 10,
-                        mid: tempSpectrum.mid / 10,
-                        treble: tempSpectrum.treble / 10
-                    };
-                    const candidate = classifySpectrum(baselineSpectrum);
-                    evaluateAndRecommend(candidate);
-                }
+
+            // Lewati baca yang nyaris silent (misal jeda antar-lagu) — hindari baseline dari noise lantai
+            const totalEnergy = current.bassEnergy + current.midEnergy + current.trebleEnergy;
+            if (totalEnergy < 5) return; // threshold minimal, kalibrasi manual sesuai fftSize/smoothing yang dipakai
+
+            spectrumBuffer.push(current);
+            if (spectrumBuffer.length > WINDOW_SIZE) spectrumBuffer.shift();
+
+            // Hanya evaluasi setelah window cukup terisi
+            if (spectrumBuffer.length < WINDOW_SIZE) return;
+
+            const avg = {
+                bass: spectrumBuffer.reduce((s, v) => s + v.bassEnergy, 0) / WINDOW_SIZE,
+                mid: spectrumBuffer.reduce((s, v) => s + v.midEnergy, 0) / WINDOW_SIZE,
+                treble: spectrumBuffer.reduce((s, v) => s + v.trebleEnergy, 0) / WINDOW_SIZE,
+            };
+
+            const candidate = classifySpectrum(avg);
+
+            if (candidate.presetId === lastRecommendedPreset) {
+                consecutiveMatchCount++;
+            } else {
+                lastRecommendedPreset = candidate.presetId;
+                consecutiveMatchCount = 1;
+            }
+
+            // Hanya munculkan rekomendasi kalau klasifikasi stabil beberapa kali berturut-turut
+            if (consecutiveMatchCount === STABLE_READS_REQUIRED) {
+                evaluateAndRecommend(candidate);
             }
         }, 500);
     }
