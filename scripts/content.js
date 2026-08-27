@@ -85,40 +85,55 @@
                         mid: tempSpectrum.mid / 10,
                         treble: tempSpectrum.treble / 10
                     };
-                    evaluateAndRecommend(baselineSpectrum);
+                    const candidate = classifySpectrum(baselineSpectrum);
+                    evaluateAndRecommend(candidate);
                 }
             }
         }, 500);
     }
 
-    function evaluateAndRecommend(spectrum) {
-        let recommendedPreset = null;
-        let message = '';
-        
-        // Thresholds dikalibrasi untuk demo hackathon agar PASTI muncul
-        if (spectrum.bass > spectrum.mid * 1.1) {
-            recommendedPreset = 'bass_boost';
-            message = 'Lagu ini bass-heavy. Coba preset Bass Boost?';
-        } else if (spectrum.mid > spectrum.bass * 1.1) {
-            recommendedPreset = 'vocal_clarity';
-            message = 'Vokal mendominasi. Coba preset Vocal Clarity?';
-        } else if (spectrum.treble > spectrum.mid * 1.1) {
-            recommendedPreset = 'tactical_audio';
-            message = 'Detail high-end tajam. Coba Tactical Audio?';
-        } else {
-            recommendedPreset = 'vocal_clarity';
-            message = 'Optimalkan vokal dengan Vocal Clarity?';
+    const REFERENCE_PROFILE = { bass: 0.42, mid: 0.38, treble: 0.20 };
+    const DEVIATION_THRESHOLD = 0.12;
+
+    function classifySpectrum(avg) {
+        const total = avg.bass + avg.mid + avg.treble;
+        if (total === 0) return { presetId: null, message: '' };
+
+        const proportion = {
+            bass: avg.bass / total,
+            mid: avg.mid / total,
+            treble: avg.treble / total,
+        };
+
+        const deviation = {
+            bass: proportion.bass - REFERENCE_PROFILE.bass,
+            mid: proportion.mid - REFERENCE_PROFILE.mid,
+            treble: proportion.treble - REFERENCE_PROFILE.treble,
+        };
+
+        const candidates = [
+            { key: 'bass', value: deviation.bass, presetId: 'bass_boost', message: 'Lagu ini bass-heavy. Coba preset Bass Boost?' },
+            { key: 'mid', value: deviation.mid, presetId: 'vocal_clarity', message: 'Vokal mendominasi. Coba preset Vocal Clarity?' },
+            { key: 'treble', value: deviation.treble, presetId: 'tactical_audio', message: 'Detail high-end tajam. Coba Tactical Audio?' },
+        ];
+
+        const strongest = candidates.reduce((max, c) => (c.value > max.value ? c : max), candidates[0]);
+
+        if (strongest.value > DEVIATION_THRESHOLD) {
+            return strongest;
         }
+
+        return { presetId: null, message: '' };
+    }
+
+    function evaluateAndRecommend(candidate) {
+        if (!candidate.presetId) return;
+
+        const recommendation = { presetId: candidate.presetId, message: candidate.message };
+        console.log('[PEQ] Rekomendasi siap:', recommendation);
         
-        if (recommendedPreset && message !== '') {
-            const recommendation = { presetId: recommendedPreset, message: message };
-            console.log('[PEQ] Rekomendasi siap:', recommendation);
-            
-            // Simpan di state agar terbaca jika popup baru dibuka nanti
-            state.recommendation = recommendation;
-            
-            chrome.runtime.sendMessage({ action: "NEW_RECOMMENDATION", data: recommendation }).catch(() => {});
-        }
+        state.recommendation = recommendation;
+        chrome.runtime.sendMessage({ action: "NEW_RECOMMENDATION", data: recommendation }).catch(() => {});
     }
 
     // --- IPC & Persistence (Fase 2) ---
