@@ -77,7 +77,7 @@
         if (analysisInterval) clearInterval(analysisInterval);
 
         const WINDOW_SIZE = 16;           // ~8 detik rolling window (16 x 500ms)
-        const STABLE_READS_REQUIRED = 6;  // klasifikasi harus konsisten 6x berturut sebelum direkomendasikan
+        const STABLE_READS_REQUIRED = 3;  // Turunkan ke 3x berturut (1.5 detik) agar lebih mudah terpicu
         let spectrumBuffer = [];
         let lastRecommendedPreset = null;
         let consecutiveMatchCount = 0;
@@ -121,7 +121,7 @@
     }
 
     const REFERENCE_PROFILE = { bass: 0.42, mid: 0.38, treble: 0.20 };
-    const DEVIATION_THRESHOLD = 0.12;
+    const DEVIATION_THRESHOLD = 0.05; // Turunkan ke 5% agar lebih sensitif
 
     function classifySpectrum(avg) {
         const total = avg.bass + avg.mid + avg.treble;
