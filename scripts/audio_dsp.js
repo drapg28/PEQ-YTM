@@ -32,6 +32,10 @@ const peqDSP = (function() {
                 return false;
             }
         }
+        
+        // TAMBAHKAN: attach analyser langsung ke sourceNode (sinyal mentah)
+        attachAnalyser(sourceNode);
+
         return true;
     }
 
@@ -80,9 +84,6 @@ const peqDSP = (function() {
 
         previousNode.connect(compressorNode);
 
-        // 4. Analyser (paralel ke input)
-        attachAnalyser(compressorNode);
-
         applyRouting();
         return true;
     }
@@ -125,6 +126,7 @@ const peqDSP = (function() {
         if (!analyserNode) {
             analyserNode = audioContext.createAnalyser();
             analyserNode.fftSize = 2048;
+            analyserNode.smoothingTimeConstant = 0.6;
         } else {
             analyserNode.disconnect();
         }
