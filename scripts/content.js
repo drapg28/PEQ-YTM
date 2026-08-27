@@ -20,6 +20,13 @@
         }
     }
 
+    let lastTrackIdentifier = null;
+
+    function getCurrentTrackIdentifier() {
+        // YouTube Music selalu update document.title jadi "Judul Lagu - Artis" saat lagu berganti
+        return document.title;
+    }
+
     function handlePlayEvent() {
         if (!window.peqDSP) return;
         const success = window.peqDSP.initAudio(videoElement);
@@ -35,8 +42,14 @@
             isGraphBuilt = true;
             console.log('[PEQ] Filter chain dibangun (10-Band + Compressor). EQ aktif.');
             
-            // Fase 4: Mulai analisis spektrum
-            startAnalysis();
+            const currentTrack = getCurrentTrackIdentifier();
+            const isNewTrack = currentTrack !== lastTrackIdentifier;
+            lastTrackIdentifier = currentTrack;
+
+            // Hanya restart analisis dari nol kalau memang lagu baru
+            if (isNewTrack) {
+                startAnalysis();
+            }
         } else {
             console.error('[PEQ] Gagal attach Web Audio API ke video.');
         }
